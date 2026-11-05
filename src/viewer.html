@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>AST Viewer</title>
+<style>
+  body { margin: 0; font-family: -apple-system, Helvetica, Arial, sans-serif; background: #fafafa; }
+  #bar { padding: 10px 16px; background: #222; color: #eee; font-size: 14px; }
+  #legend span { display: inline-block; margin-right: 14px; }
+  #legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+  svg { width: 100vw; height: calc(100vh - 70px); display: block; }
+  .link { fill: none; stroke: #999; stroke-width: 1.5px; }
+  .node rect { stroke: #333; stroke-width: 1px; cursor: pointer; }
+  .node text { font-size: 13px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .node.collapsed rect { stroke-width: 3px; stroke-dasharray: 4 2; }
+</style>
+</head>
+<body>
+<div id="bar">
+  AST: клік по вузлу згортає/розгортає гілку, колесо миші масштабує, перетягування рухає.
+  <div id="legend"></div>
+</div>
+<svg id="svg"></svg>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="tree.js"></script>
+<script>
+const colors = {
+  num: "#f4b942", var: "#8ecae6", op: "#95d5b2",
+  stmt: "#f4a09c", ctrl: "#c8b6ff", block: "#d0d6dc"
+};
+const names = {
+  num: "число", var: "змінна", op: "операція",
+  stmt: "оператор", ctrl: "if / while", block: "блок"
+};
+d3.select("#legend").selectAll("span").data(Object.keys(colors)).join("span")
+  .html(k => `<i style="background:${colors[k]}"></i>${names[k]}`);
+
+const svg = d3.select("#svg");
+const g = svg.append("g");
+const zoom = d3.zoom().scaleExtent([0.1, 3]).on("zoom", e => g.attr("transform", e.transform));
+svg.call(zoom);
+svg.call(zoom.transform, d3.zoomIdentity.translate(window.innerWidth / 2, 40));
+
+const root = d3.hierarchy(AST);
+
+function render() {
+  g.selectAll("*").remove();
+  d3.tree().nodeSize([90, 90])(root);
+
+  g.selectAll(".link").data(root.links()).join("path")
+    .attr("class", "link")
+    .attr("d", d3.linkVertical().x(d => d.x).y(d => d.y));
+
+  const node = g.selectAll(".node").data(root.descendants()).join("g")
+    .attr("class", d => "node" + (d._children ? " collapsed" : ""))
+    .attr("transform", d => `translate(${d.x},${d.y})`)
+    .on("click", (e, d) => {
+      if (d.children) { d._children = d.children; d.children = null; }
+      else if (d._children) { d.children = d._children; d._children = null; }
+      render();
+    });
+
+  node.append("rect")
+    .attr("width", d => d.data.name.length * 8 + 20)
+    .attr("height", 28)
+    .attr("x", d => -(d.data.name.length * 8 + 20) / 2)
+    .attr("y", -14)
+    .attr("rx", 6)
+    .attr("fill", d => colors[d.data.kind]);
+
+  node.append("text").text(d => d.data.name);
+}
+render();
+</script>
+</body>
+</html>

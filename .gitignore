@@ -1,0 +1,9 @@
+src/lang
+src/lang.tab.c
+src/lang.tab.h
+src/lex.yy.c
+src/tree.js
+*.o
+out
+out.c
+.DS_Store
