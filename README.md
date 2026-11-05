@@ -14,6 +14,19 @@
 - вбудований `print(expr)`
 - коментарі `//` та `/* */`
 
+~~~c
+int fact(int n) {
+    if (n <= 1) { return 1; }
+    return n * fact(n - 1);
+}
+
+int main() {
+    int i;
+    for (i = 1; i <= 5; i++) { print(fact(i)); }
+    return 0;
+}
+~~~
+
 Спрощення: `i++` розгортається в `i = i + 1` у граматиці; область видимості одна на функцію.
 
 ## Режими
@@ -27,9 +40,19 @@
 
 ## Збірка (macOS)
 
+~~~
+brew install flex bison
+export PATH="$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$PATH"
+cd src && make
+~~~
+
 Потрібен bison 3.x (системний 2.3 застарілий).
 
 ## Демонстрація
+
+~~~
+./demo.sh examples/test3.lang
+~~~
 
 ## Структура
 
