@@ -1,49 +1,45 @@
 #include <stdio.h>
 #include "ast_json.h"
 
-static void op_text(char op, char *buf) {
-    switch (op) {
-        case 'e': sprintf(buf, "=="); break;
-        case 'n': sprintf(buf, "!="); break;
-        case 'l': sprintf(buf, "<="); break;
-        case 'g': sprintf(buf, ">="); break;
-        default:  sprintf(buf, "%c", op);
+static void json_node(Node *n, FILE *out);
+
+static void json_chain(Node *s, FILE *out, int *cnt) {
+    for (; s; s = s->next) {
+        if ((*cnt)++) fputc(',', out);
+        json_node(s, out);
     }
 }
 
 static void json_node(Node *n, FILE *out) {
-    char op[4], label[128];
+    char label[160];
     const char *kind = "stmt";
 
     switch (n->type) {
-        case N_NUM:    snprintf(label, sizeof label, "%g", n->num); kind = "num"; break;
-        case N_VAR:    snprintf(label, sizeof label, "%s", n->name); kind = "var"; break;
-        case N_BINOP:  op_text(n->op, op); snprintf(label, sizeof label, "%s", op); kind = "op"; break;
-        case N_UNARY:  op_text(n->op, op); snprintf(label, sizeof label, "unary %s", op); kind = "op"; break;
-        case N_ASSIGN: snprintf(label, sizeof label, "%s =", n->name); kind = "stmt"; break;
-        case N_PRINT:  snprintf(label, sizeof label, "print"); kind = "stmt"; break;
-        case N_IF:     snprintf(label, sizeof label, "if"); kind = "ctrl"; break;
-        case N_WHILE:  snprintf(label, sizeof label, "while"); kind = "ctrl"; break;
-        case N_BLOCK:  snprintf(label, sizeof label, "block"); kind = "block"; break;
+        case N_NUM:     snprintf(label, sizeof label, "%g", n->num); kind = "num"; break;
+        case N_VAR:     snprintf(label, sizeof label, "%s", n->name); kind = "var"; break;
+        case N_BINOP:   snprintf(label, sizeof label, "%s", op_str(n->op)); kind = "op"; break;
+        case N_UNARY:   snprintf(label, sizeof label, "unary %s", op_str(n->op)); kind = "op"; break;
+        case N_CALL:    snprintf(label, sizeof label, "%s()", n->name); kind = "op"; break;
+        case N_ASSIGN:  snprintf(label, sizeof label, "%s =", n->name); break;
+        case N_PRINT:   snprintf(label, sizeof label, "print"); break;
+        case N_DECL:    snprintf(label, sizeof label, "%s %s", type_str(n->vtype), n->name); break;
+        case N_PARAM:   snprintf(label, sizeof label, "%s %s", type_str(n->vtype), n->name); kind = "var"; break;
+        case N_IF:      snprintf(label, sizeof label, "if"); kind = "ctrl"; break;
+        case N_WHILE:   snprintf(label, sizeof label, "while"); kind = "ctrl"; break;
+        case N_FOR:     snprintf(label, sizeof label, "for"); kind = "ctrl"; break;
+        case N_RETURN:  snprintf(label, sizeof label, "return"); kind = "ctrl"; break;
+        case N_FUNC:    snprintf(label, sizeof label, "%s %s()", type_str(n->vtype), n->name); kind = "ctrl"; break;
+        case N_BLOCK:   snprintf(label, sizeof label, "block"); kind = "block"; break;
+        case N_PROGRAM: snprintf(label, sizeof label, "program"); kind = "block"; break;
+        default:        snprintf(label, sizeof label, "?"); break;
     }
 
     fprintf(out, "{\"name\":\"%s\",\"kind\":\"%s\",\"children\":[", label, kind);
-
     int cnt = 0;
-    if (n->type == N_BLOCK) {
-        for (Node *s = n->a; s; s = s->next) {
-            if (cnt++) fputc(',', out);
-            json_node(s, out);
-        }
-    } else {
-        Node *kids[3] = { n->a, n->b, n->c };
-        for (int i = 0; i < 3; i++) {
-            if (kids[i]) {
-                if (cnt++) fputc(',', out);
-                json_node(kids[i], out);
-            }
-        }
-    }
+    json_chain(n->a, out, &cnt);
+    json_chain(n->b, out, &cnt);
+    json_chain(n->c, out, &cnt);
+    json_chain(n->d, out, &cnt);
     fputs("]}", out);
 }
 

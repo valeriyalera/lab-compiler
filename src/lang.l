@@ -1,4 +1,5 @@
 %{
+#include <stdlib.h>
 #include <string.h>
 #include "ast.h"
 #include "lang.tab.h"
@@ -9,21 +10,33 @@
 
 %%
 
+"int"       { return KW_INT; }
+"double"    { return KW_DOUBLE; }
+"void"      { return KW_VOID; }
 "if"        { return IF; }
 "else"      { return ELSE; }
 "while"     { return WHILE; }
+"for"       { return FOR; }
+"return"    { return RETURN; }
 "print"     { return PRINT; }
 
 "=="        { return EQ; }
 "!="        { return NE; }
 "<="        { return LE; }
 ">="        { return GE; }
+"&&"        { return AND; }
+"||"        { return OR; }
+"++"        { return INC; }
+"--"        { return DEC; }
+"!"         { return NOT; }
 
-[0-9]+(\.[0-9]+)?       { yylval.num = atof(yytext); return NUMBER; }
+[0-9]+\.[0-9]+          { yylval.num = atof(yytext); return DNUM; }
+[0-9]+                  { yylval.num = atof(yytext); return INUM; }
 [a-zA-Z_][a-zA-Z0-9_]*  { yylval.str = strdup(yytext); return IDENT; }
 
-"//".*      { /* комментарий до конца строки */ }
-[ \t\r\n]+  { /* пробелы и переводы строк пропускаем */ }
-.           { return yytext[0]; }
+"//".*                          { /* однострочный комментарий */ }
+"/*"([^*]|\*+[^*/])*\*+"/"      { /* многострочный комментарий */ }
+[ \t\r\n]+                      { /* пробелы */ }
+.                               { return yytext[0]; }
 
 %%

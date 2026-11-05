@@ -2,59 +2,53 @@
 #include <string.h>
 #include "codegen.h"
 
-#define MAX_VARS 256
-static char *names[MAX_VARS];
-static int nnames = 0;
-
-/* Собираем имена всех переменных, чтобы объявить их в начале */
-static void add_name(const char *s) {
-    for (int i = 0; i < nnames; i++)
-        if (strcmp(names[i], s) == 0) return;
-    if (nnames < MAX_VARS) names[nnames++] = (char *)s;
-}
-
-static void collect(Node *n) {
-    for (; n; n = n->next) {
-        if (n->type == N_ASSIGN || n->type == N_VAR) add_name(n->name);
-        collect(n->a);
-        collect(n->b);
-        collect(n->c);
-    }
-}
-
-static const char *c_op(char op) {
-    switch (op) {
-        case 'e': return "==";
-        case 'n': return "!=";
-        case 'l': return "<=";
-        case 'g': return ">=";
-        default: { static char b[2]; b[0] = op; b[1] = 0; return b; }
-    }
-}
-
 static void gen_expr(Node *n, FILE *out) {
     switch (n->type) {
         case N_NUM: {
             char buf[64];
-            snprintf(buf, sizeof buf, "%g", n->num);
-            if (!strpbrk(buf, ".eE")) strcat(buf, ".0");  /* 5 -> 5.0, чтобы не было целочисленного деления */
+            if (n->vtype == T_INT) {
+                snprintf(buf, sizeof buf, "%.0f", n->num);
+            } else {
+                snprintf(buf, sizeof buf, "%g", n->num);
+                if (!strpbrk(buf, ".eE")) strcat(buf, ".0");
+            }
             fprintf(out, "%s", buf);
             break;
         }
         case N_VAR: fprintf(out, "%s", n->name); break;
         case N_UNARY:
-            fprintf(out, "(-");
+            fprintf(out, "(%s", op_str(n->op));
             gen_expr(n->a, out);
             fprintf(out, ")");
             break;
         case N_BINOP:
             fprintf(out, "(");
             gen_expr(n->a, out);
-            fprintf(out, " %s ", c_op(n->op));
+            fprintf(out, " %s ", op_str(n->op));
             gen_expr(n->b, out);
             fprintf(out, ")");
             break;
+        case N_CALL:
+            fprintf(out, "%s(", n->name);
+            for (Node *a = n->a; a; a = a->next) {
+                if (a != n->a) fprintf(out, ", ");
+                gen_expr(a, out);
+            }
+            fprintf(out, ")");
+            break;
         default: break;
+    }
+}
+
+/* объявление или присваивание без ';' (нужно и для заголовка for) */
+static void gen_simple(Node *n, FILE *out) {
+    if (!n) return;
+    if (n->type == N_DECL) {
+        fprintf(out, "%s %s = ", type_str(n->vtype), n->name);
+        if (n->a) gen_expr(n->a, out); else fprintf(out, "0");
+    } else if (n->type == N_ASSIGN) {
+        fprintf(out, "%s = ", n->name);
+        gen_expr(n->a, out);
     }
 }
 
@@ -64,8 +58,8 @@ static void indent(FILE *out, int d) {
 
 static void gen_stmt(Node *n, int d, FILE *out);
 
-/* Тело if/while: если это блок, берём его содержимое без лишних скобок */
 static void gen_body(Node *n, int d, FILE *out) {
+    if (!n) return;
     if (n->type == N_BLOCK) gen_stmt(n->a, d, out);
     else gen_stmt(n, d, out);
 }
@@ -73,15 +67,25 @@ static void gen_body(Node *n, int d, FILE *out) {
 static void gen_stmt(Node *n, int d, FILE *out) {
     for (; n; n = n->next) {
         switch (n->type) {
+            case N_DECL:
             case N_ASSIGN:
                 indent(out, d);
-                fprintf(out, "%s = ", n->name);
-                gen_expr(n->a, out);
+                gen_simple(n, out);
                 fprintf(out, ";\n");
+                break;
+            case N_CALL:
+                indent(out, d);
+                gen_expr(n, out);
+                fprintf(out, ";\n");
+                break;
+            case N_RETURN:
+                indent(out, d);
+                if (n->a) { fprintf(out, "return "); gen_expr(n->a, out); fprintf(out, ";\n"); }
+                else fprintf(out, "return;\n");
                 break;
             case N_PRINT:
                 indent(out, d);
-                fprintf(out, "printf(\"%%g\\n\", ");
+                fprintf(out, "PRINT(");
                 gen_expr(n->a, out);
                 fprintf(out, ");\n");
                 break;
@@ -108,6 +112,19 @@ static void gen_stmt(Node *n, int d, FILE *out) {
                 indent(out, d);
                 fprintf(out, "}\n");
                 break;
+            case N_FOR:
+                indent(out, d);
+                fprintf(out, "for (");
+                gen_simple(n->a, out);
+                fprintf(out, "; ");
+                if (n->b) gen_expr(n->b, out);
+                fprintf(out, "; ");
+                gen_simple(n->c, out);
+                fprintf(out, ") {\n");
+                gen_body(n->d, d + 1, out);
+                indent(out, d);
+                fprintf(out, "}\n");
+                break;
             case N_BLOCK:
                 indent(out, d);
                 fprintf(out, "{\n");
@@ -120,17 +137,32 @@ static void gen_stmt(Node *n, int d, FILE *out) {
     }
 }
 
-void generate_c(Node *root, FILE *out) {
-    nnames = 0;
-    collect(root);
-
-    fprintf(out, "#include <stdio.h>\n\nint main(void) {\n");
-    for (int i = 0; i < nnames; i++) {
-        indent(out, 1);
-        fprintf(out, "double %s = 0;\n", names[i]);
+static void gen_params(Node *p, FILE *out) {
+    if (!p) { fprintf(out, "void"); return; }
+    for (Node *q = p; q; q = q->next) {
+        if (q != p) fprintf(out, ", ");
+        fprintf(out, "%s %s", type_str(q->vtype), q->name);
     }
-    if (nnames) fprintf(out, "\n");
-    gen_stmt(root->a, 1, out);
-    indent(out, 1);
-    fprintf(out, "return 0;\n}\n");
+}
+
+void generate_c(Node *root, FILE *out) {
+    fprintf(out, "#include <stdio.h>\n\n");
+    fprintf(out, "/* print(x): формат выбирается по типу выражения */\n");
+    fprintf(out, "#define PRINT(x) printf(_Generic((x), int: \"%%d\\n\", double: \"%%g\\n\"), (x))\n\n");
+
+    /* прототипы, чтобы порядок функций не имел значения */
+    for (Node *f = root->a; f; f = f->next) {
+        fprintf(out, "%s %s(", type_str(f->vtype), f->name);
+        gen_params(f->a, out);
+        fprintf(out, ");\n");
+    }
+    fprintf(out, "\n");
+
+    for (Node *f = root->a; f; f = f->next) {
+        fprintf(out, "%s %s(", type_str(f->vtype), f->name);
+        gen_params(f->a, out);
+        fprintf(out, ") {\n");
+        gen_stmt(f->b->a, 1, out);
+        fprintf(out, "}\n\n");
+    }
 }

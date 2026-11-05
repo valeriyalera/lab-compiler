@@ -1,0 +1,24 @@
+/* функции, рекурсия, for, типы int и double */
+int fact(int n) {
+    if (n <= 1) { return 1; }
+    return n * fact(n - 1);
+}
+
+double avg(double a, double b) {
+    return (a + b) / 2;
+}
+
+int main() {
+    int i;
+    for (i = 1; i <= 5; i++) {
+        print(fact(i));
+    }
+    int x = 7;
+    print(x / 2);          // целочисленное деление: 3
+    print(avg(3, 4));      // 3.5
+    double d = 7;
+    print(d / 2);          // 3.5
+    if (x > 3 && !(x == 5)) { print(1); } else { print(0); }
+    print(x % 4);
+    return 0;
+}
