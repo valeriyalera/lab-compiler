@@ -12,7 +12,6 @@ static Node *program = NULL;
 
 static Value mkv(double v, int is_int) { Value x; x.v = v; x.is_int = is_int; return x; }
 
-/* приведение значения к типу переменной: int отбрасывает дробную часть, как в C */
 static Value coerce(Value v, int type) {
     if (type == T_INT)    return mkv((double)(long long)v.v, 1);
     if (type == T_DOUBLE) return mkv(v.v, 0);
@@ -121,7 +120,6 @@ static Value eval(Node *n, Frame *f) {
     }
 }
 
-/* Выполняет список операторов. Возвращает 1, если встретился return. */
 static int exec(Node *n, Frame *f) {
     for (; n; n = n->next) {
         switch (n->type) {
