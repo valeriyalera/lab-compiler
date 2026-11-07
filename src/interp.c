@@ -82,7 +82,6 @@ static Value eval(Node *n, Frame *f) {
         }
         case N_CALL: return call_function(n, f);
         case N_BINOP: {
-            /* && и || вычисляются лениво, как в C */
             if (n->op == '&') {
                 Value l = eval(n->a, f);
                 if (l.v == 0) return mkv(0, 1);
