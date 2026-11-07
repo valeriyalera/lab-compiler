@@ -149,7 +149,6 @@ void generate_c(Node *root, FILE *out) {
     fprintf(out, "/* print(x): формат обирається за типом виразу */\n");
     fprintf(out, "#define PRINT(x) printf(_Generic((x), int: \"%%d\\n\", double: \"%%g\\n\"), (x))\n\n");
 
-    /* прототипы, чтобы порядок функций не имел значения */
     for (Node *f = root->a; f; f = f->next) {
         fprintf(out, "%s %s(", type_str(f->vtype), f->name);
         gen_params(f->a, out);
