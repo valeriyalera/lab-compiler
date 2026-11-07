@@ -83,7 +83,6 @@ stmt_list:
     | stmt_list stmt                  { $$ = append_stmt($1, $2); }
     ;
 
-/* "простой оператор" без точки с запятой: используется и в for(...) */
 simple:
     /* пусто */                       { $$ = NULL; }
     | type IDENT                      { $$ = mk_decl($1, $2, NULL); }
