@@ -11,15 +11,15 @@ typedef enum {
 
 typedef struct Node {
     NodeType type;
-    double num;          /* N_NUM */
-    char *name;          /* имя переменной / функции */
-    char op;             /* + - * / % < > e(==) n(!=) l(<=) g(>=) &(&&) |(||) !(унарный) */
-    int vtype;           /* VType: тип числа, переменной, параметра, возвращаемого значения */
+    double num;         
+    char *name;         
+    char op;           
+    int vtype;         
     struct Node *a;
     struct Node *b;
     struct Node *c;
     struct Node *d;
-    struct Node *next;   /* следующий элемент списка: оператор, аргумент, параметр, функция */
+    struct Node *next;   
 } Node;
 
 Node *mk_num(double v, int vtype);
