@@ -114,3 +114,10 @@ cd src && make
 - `src/ast_json.c` експорт AST для d3.js
 - `src/viewer.html` візуалізація
 - `examples/` тестові програми
+
+## Візуалізація AST
+
+AST програми `examples/test2.lang` (факторіал) у браузері. Кольори позначають
+тип вузла: число, змінна, операція, оператор, керування, блок.
+
+![AST для test2.lang](docs/ast-test2.png)
