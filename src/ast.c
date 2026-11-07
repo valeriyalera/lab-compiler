@@ -73,7 +73,6 @@ const char *type_str(int vtype) {
     }
 }
 
-/* Печать дерева. Дети хранятся в a, b, c, d; списки связаны через next. */
 void print_tree(Node *n, int depth) {
     for (; n; n = n->next) {
         char label[160];
