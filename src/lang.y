@@ -152,5 +152,5 @@ expr:
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Ошибка на строке %d: %s\n", yylineno, s);
+    fprintf(stderr, "Помилка у рядку %d: %s\n", yylineno, s);
 }

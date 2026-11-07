@@ -34,7 +34,7 @@ static Var *lookup(Frame *f, const char *name) {
 static void declare(Frame *f, const char *name, int type, Value v) {
     Var *p = lookup(f, name);
     if (!p) {
-        if (f->n >= MAX_VARS) { fprintf(stderr, "Ошибка выполнения: слишком много переменных\n"); return; }
+        if (f->n >= MAX_VARS) { fprintf(stderr, "Помилка виконання: забагато змінних\n"); return; }
         p = &f->vars[f->n++];
         p->name = name;
     }
@@ -48,7 +48,7 @@ static int exec(Node *n, Frame *f);
 static Value call_function(Node *call, Frame *caller) {
     Node *fn = find_func(call->name);
     if (!fn) {
-        fprintf(stderr, "Ошибка выполнения: функция '%s' не определена\n", call->name);
+        fprintf(stderr, "Помилка виконання: функцію '%s' не визначено\n", call->name);
         return mkv(0, 1);
     }
     Frame fr;
@@ -58,7 +58,7 @@ static Value call_function(Node *call, Frame *caller) {
     for (; p && a; p = p->next, a = a->next)
         declare(&fr, p->name, p->vtype, eval(a, caller));
     if (p || a) {
-        fprintf(stderr, "Ошибка выполнения: неверное число аргументов в вызове '%s'\n", call->name);
+        fprintf(stderr, "Помилка виконання: невірна кількість аргументів у виклику '%s'\n", call->name);
         return mkv(0, 1);
     }
     exec(fn->b, &fr);
@@ -71,7 +71,7 @@ static Value eval(Node *n, Frame *f) {
         case N_VAR: {
             Var *p = lookup(f, n->name);
             if (!p) {
-                fprintf(stderr, "Ошибка выполнения: переменная '%s' не объявлена (считаю 0)\n", n->name);
+                fprintf(stderr, "Помилка виконання: змінну '%s' не оголошено (вважаю 0)\n", n->name);
                 return mkv(0, 1);
             }
             return p->val;
@@ -102,11 +102,11 @@ static Value eval(Node *n, Frame *f) {
                 case '-': return mkv(l.v - r.v, both);
                 case '*': return mkv(l.v * r.v, both);
                 case '/':
-                    if (r.v == 0) { fprintf(stderr, "Ошибка выполнения: деление на ноль\n"); return mkv(0, both); }
+                    if (r.v == 0) { fprintf(stderr, "Помилка виконання: ділення на нуль\n"); return mkv(0, both); }
                     if (both) return mkv((double)((long long)l.v / (long long)r.v), 1);
                     return mkv(l.v / r.v, 0);
                 case '%':
-                    if (!both || r.v == 0) { fprintf(stderr, "Ошибка выполнения: %% требует двух int и ненулевого делителя\n"); return mkv(0, 1); }
+                    if (!both || r.v == 0) { fprintf(stderr, "Помилка виконання: %% вимагає двох int і ненульового дільника\n"); return mkv(0, 1); }
                     return mkv((double)((long long)l.v % (long long)r.v), 1);
                 case '<': return mkv(l.v < r.v, 1);
                 case '>': return mkv(l.v > r.v, 1);
@@ -131,7 +131,7 @@ static int exec(Node *n, Frame *f) {
             case N_ASSIGN: {
                 Var *p = lookup(f, n->name);
                 Value v = eval(n->a, f);
-                if (!p) fprintf(stderr, "Ошибка выполнения: переменная '%s' не объявлена\n", n->name);
+                if (!p) fprintf(stderr, "Помилка виконання: змінну '%s' не оголошено\n", n->name);
                 else p->val = coerce(v, p->type);
                 break;
             }
@@ -174,7 +174,7 @@ static int exec(Node *n, Frame *f) {
 void run_program(Node *root) {
     program = root;
     if (!find_func("main")) {
-        fprintf(stderr, "Ошибка: нет функции main\n");
+        fprintf(stderr, "Помилка: немає функції main\n");
         return;
     }
     Node call = {0};

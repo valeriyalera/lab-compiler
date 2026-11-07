@@ -147,7 +147,7 @@ static void gen_params(Node *p, FILE *out) {
 
 void generate_c(Node *root, FILE *out) {
     fprintf(out, "#include <stdio.h>\n\n");
-    fprintf(out, "/* print(x): формат выбирается по типу выражения */\n");
+    fprintf(out, "/* print(x): формат обирається за типом виразу */\n");
     fprintf(out, "#define PRINT(x) printf(_Generic((x), int: \"%%d\\n\", double: \"%%g\\n\"), (x))\n\n");
 
     /* прототипы, чтобы порядок функций не имел значения */
