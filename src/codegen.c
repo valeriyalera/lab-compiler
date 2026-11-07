@@ -40,7 +40,6 @@ static void gen_expr(Node *n, FILE *out) {
     }
 }
 
-/* объявление или присваивание без ';' (нужно и для заголовка for) */
 static void gen_simple(Node *n, FILE *out) {
     if (!n) return;
     if (n->type == N_DECL) {
